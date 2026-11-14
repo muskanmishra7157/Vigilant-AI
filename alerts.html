@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Alerts - Honeytoken System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-bell"></i> Security Alerts</h2>
+    {% set unread_alerts = alerts|selectattr('acknowledged', 'equalto', 0)|list|length %}
+    {% if unread_alerts > 0 %}
+    <span class="badge bg-danger">{{ unread_alerts }} Unread</span>
+    {% endif %}
+</div>
+
+<!-- Alert Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h3>{{ alerts|selectattr('severity', 'equalto', 'critical')|list|length }}</h3>
+                <p class="mb-0">Critical</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning">
+            <div class="card-body text-center">
+                <h3>{{ alerts|selectattr('severity', 'equalto', 'high')|list|length }}</h3>
+                <p class="mb-0">High</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h3>{{ alerts|selectattr('severity', 'equalto', 'medium')|list|length }}</h3>
+                <p class="mb-0">Medium</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-secondary text-white">
+            <div class="card-body text-center">
+                <h3>{{ alerts|selectattr('acknowledged', 'equalto', 1)|list|length }}</h3>
+                <p class="mb-0">Acknowledged</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alerts List -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-list-ul"></i> All Alerts</h5>
+        <div class="btn-group">
+            <button class="btn btn-sm btn-outline-success" onclick="markAllAsRead()">
+                <i class="bi bi-check-all"></i> Mark All Read
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="clearAlerts()">
+                <i class="bi bi-trash"></i> Clear All
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if alerts %}
+        <div class="list-group list-group-flush">
+            {% for alert in alerts %}
+            <div class="list-group-item list-group-item-action
+                {% if not alert.acknowledged %}
+                    list-group-item-{{ 'danger' if alert.severity == 'critical' else 'warning' if alert.severity == 'high' else 'info' }}
+                {% endif %}">
+                <div class="d-flex w-100 justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            {% if alert.severity == 'critical' %}
+                            <i class="bi bi-exclamation-triangle-fill fs-4 text-danger me-3"></i>
+                            {% elif alert.severity == 'high' %}
+                            <i class="bi bi-exclamation-circle-fill fs-4 text-warning me-3"></i>
+                            {% else %}
+                            <i class="bi bi-info-circle-fill fs-4 text-info me-3"></i>
+                            {% endif %}
+
+                            <div>
+                                <h6 class="mb-1">
+                                    {{ alert.alert_type|title }} Alert
+                                    <span class="badge bg-{{
+                                        'danger' if alert.severity == 'critical' else
+                                        'warning' if alert.severity == 'high' else
+                                        'info'
+                                    }} ms-2">
+                                        {{ alert.severity|upper }}
+                                    </span>
+                                </h6>
+                                <p class="mb-1">{{ alert.alert_message }}</p>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="bi bi-clock"></i> {{ alert.sent_at[:19] }}
+                                </small>
+                                <br>
+                                <small class="text-muted">
+                                    <i class="bi bi-key"></i> Token: {{ alert.token_name or 'Unknown' }}
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="bi bi-globe"></i> IP: <code>{{ alert.source_ip }}</code>
+                                </small>
+                                <br>
+                                <small class="text-muted">
+                                    <i class="bi bi-shield"></i> Classification:
+                                    <span class="badge bg-{{
+                                        'danger' if alert.classification == 'malicious' else
+                                        'warning' if alert.classification == 'suspicious' else
+                                        'success'
+                                    }}">
+                                        {{ alert.classification|upper }}
+                                    </span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ms-3 text-end">
+                        {% if not alert.acknowledged %}
+                        <button class="btn btn-sm btn-success mb-2"
+                                onclick="markAsRead({{ alert.id }})">
+                            <i class="bi bi-check"></i> Mark Read
+                        </button>
+                        {% else %}
+                        <span class="badge bg-success">
+                            <i class="bi bi-check-circle"></i> Acknowledged
+                        </span>
+                        <br>
+                        <small class="text-muted">
+                            by {{ current_user.username }}<br>
+                            {{ alert.acknowledged_at[:16] if alert.acknowledged_at else '' }}
+                        </small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-bell-slash fs-1 text-muted mb-3"></i>
+            <h5>No Alerts</h5>
+            <p class="text-muted">No security alerts at this time.</p>
+            <a href="{{ url_for('test_token') }}" class="btn btn-warning">
+                <i class="bi bi-bug"></i> Test Alert System
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Alert Response Guide -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-shield-check"></i> Alert Response Guide</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card bg-danger text-white mb-3">
+                    <div class="card-body">
+                        <h6><i class="bi bi-exclamation-triangle"></i> CRITICAL</h6>
+                        <p class="small mb-0">Immediate investigation required. Possible breach.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-warning mb-3">
+                    <div class="card-body">
+                        <h6><i class="bi bi-exclamation-circle"></i> HIGH</h6>
+                        <p class="small mb-0">Investigate within 24 hours. Suspicious activity.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-info text-white mb-3">
+                    <div class="card-body">
+                        <h6><i class="bi bi-info-circle"></i> MEDIUM</h6>
+                        <p class="small mb-0">Monitor and review. Unusual but not critical.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h6>Recommended Actions:</h6>
+        <ol>
+            <li><strong>Acknowledge</strong> alerts when reviewed</li>
+            <li><strong>Investigate</strong> source IP and access patterns</li>
+            <li><strong>Check</strong> related logs for similar activities</li>
+            <li><strong>Consider</strong> blocking malicious IP addresses</li>
+            <li><strong>Update</strong> security measures if needed</li>
+        </ol>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+function markAsRead(alertId) {
+    fetch('/api/alerts/' + alertId + '/read', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed to mark alert as read');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error marking alert as read');
+    });
+}
+
+function markAllAsRead() {
+    if (confirm('Mark all alerts as read?')) {
+        // In a real app, you would have an endpoint to mark all as read
+        alert('This would mark all alerts as read in a real implementation');
+    }
+}
+
+function clearAlerts() {
+    if (confirm('Clear all alerts? This action cannot be undone.')) {
+        // In a real app, you would have an endpoint to clear alerts
+        alert('This would clear all alerts in a real implementation');
+    }
+}
+</script>
+{% endblock %}
+{% endblock %}
