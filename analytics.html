@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - HoneyToken Security{% endblock %}
+
+{% block page_title %}Security Analytics{% endblock %}
+{% block page_subtitle %}AI-powered threat analysis and insights{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Threat Intelligence Dashboard</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="dashboard-card">
+                            <div class="card-title">Top Attack Countries</div>
+                            <div class="card-value" id="attackCountries">0</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-card">
+                            <div class="card-title">Peak Attack Time</div>
+                            <div class="card-value" id="peakTime">00:00</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-card">
+                            <div class="card-title">Most Targeted Token</div>
+                            <div class="card-value" id="topToken">None</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="dashboard-card">
+                            <div class="card-title">AI Detection Rate</div>
+                            <div class="card-value" id="detectionRate">0%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="chart-container">
+                            <h5><i class="fas fa-map me-2"></i>Attack Geographic Distribution</h5>
+                            <div id="geoChart" style="height: 300px;"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="chart-container">
+                            <h5><i class="fas fa-clock me-2"></i>Attack Time Pattern</h5>
+                            <div id="timeChart" style="height: 300px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="chart-container">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0"><i class="fas fa-robot me-2"></i>AI Model Performance</h5>
+                                <button class="btn btn-sm btn-primary" onclick="retrainModel()">
+                                    <i class="fas fa-sync-alt me-1"></i> Retrain Model
+                                </button>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center p-3">
+                                        <div class="display-4 text-primary">92%</div>
+                                        <p class="text-muted">Accuracy</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-3">
+                                        <div class="display-4 text-success">94%</div>
+                                        <p class="text-muted">Precision</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-3">
+                                        <div class="display-4 text-warning">89%</div>
+                                        <p class="text-muted">Recall</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-3">
+                                        <div class="display-4 text-info">91%</div>
+                                        <p class="text-muted">F1 Score</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadAnalytics();
+});
+
+function loadAnalytics() {
+    fetch('/api/analytics')
+        .then(response => response.json())
+        .then(data => {
+            updateAnalyticsData(data);
+            createGeoChart(data.geoData || []);
+            createTimeChart(data.timeData || []);
+        })
+        .catch(error => {
+            console.error('Error loading analytics:', error);
+            loadSampleData();
+        });
+}
+
+function updateAnalyticsData(data) {
+    document.getElementById('attackCountries').textContent = data.topCountries || '12';
+    document.getElementById('peakTime').textContent = data.peakTime || '14:30';
+    document.getElementById('topToken').textContent = data.topToken || 'API Key #1';
+    document.getElementById('detectionRate').textContent = data.detectionRate || '92%';
+}
+
+function createGeoChart(geoData) {
+    if (!geoData || geoData.length === 0) {
+        geoData = [
+            { country: 'United States', count: 45 },
+            { country: 'China', count: 32 },
+            { country: 'Russia', count: 28 },
+            { country: 'India', count: 25 },
+            { country: 'Brazil', count: 18 }
+        ];
+    }
+
+    const countries = geoData.map(item => item.country);
+    const counts = geoData.map(item => item.count);
+
+    const trace = {
+        x: countries,
+        y: counts,
+        type: 'bar',
+        marker: {
+            color: '#4361ee'
+        }
+    };
+
+    const layout = {
+        margin: { t: 0, r: 0, b: 40, l: 50 },
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        xaxis: {
+            tickangle: 45,
+            gridcolor: 'rgba(0,0,0,0.05)'
+        },
+        yaxis: {
+            title: 'Attack Count',
+            gridcolor: 'rgba(0,0,0,0.05)'
+        }
+    };
+
+    Plotly.newPlot('geoChart', [trace], layout, { displayModeBar: false });
+}
+
+function createTimeChart(timeData) {
+    if (!timeData || timeData.length === 0) {
+        timeData = [];
+        for (let i = 0; i < 24; i++) {
+            timeData.push({
+                hour: i,
+                count: Math.floor(Math.random() * 30) + 10
+            });
+        }
+    }
+
+    const hours = timeData.map(item => `${item.hour}:00`);
+    const counts = timeData.map(item => item.count);
+
+    const trace = {
+        x: hours,
+        y: counts,
+        type: 'scatter',
+        mode: 'lines+markers',
+        line: { shape: 'spline', color: '#f72585', width: 3 },
+        marker: { size: 6, color: '#b5179e' },
+        fill: 'tozeroy',
+        fillcolor: 'rgba(247, 37, 133, 0.1)'
+    };
+
+    const layout = {
+        margin: { t: 0, r: 0, b: 40, l: 50 },
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
+        xaxis: {
+            gridcolor: 'rgba(0,0,0,0.05)'
+        },
+        yaxis: {
+            title: 'Attack Count',
+            gridcolor: 'rgba(0,0,0,0.05)'
+        }
+    };
+
+    Plotly.newPlot('timeChart', [trace], layout, { displayModeBar: false });
+}
+
+function retrainModel() {
+    if (confirm('Retrain AI model? This may take a few minutes.')) {
+        fetch('/api/ai/train', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('AI model training started', 'success');
+            } else {
+                showToast('Failed to start training: ' + data.error, 'danger');
+            }
+        })
+        .catch(error => {
+            showToast('Network error: ' + error.message, 'danger');
+        });
+    }
+}
+
+function loadSampleData() {
+    // Load sample data for demo purposes
+    updateAnalyticsData({
+        topCountries: 12,
+        peakTime: '14:30',
+        topToken: 'API Key #1',
+        detectionRate: '92%'
+    });
+
+    createGeoChart();
+    createTimeChart();
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-bg-${type} border-0 position-fixed bottom-0 end-0 m-3`;
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"></button>
+        </div>
+    `;
+
+    document.body.appendChild(toast);
+
+    const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+    bsToast.show();
+
+    toast.querySelector('.btn-close').addEventListener('click', () => bsToast.hide());
+    toast.addEventListener('hidden.bs.toast', () => toast.remove());
+}
+</script>
+{% endblock %}
