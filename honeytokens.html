@@ -1,0 +1,387 @@
+{% extends "base.html" %}
+
+{% block title %}Honeytokens - Honeytoken Security{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="page-header">
+            <h1><i class="fas fa-bug"></i> Honeytokens Management</h1>
+            <p class="lead">Create and manage honeytokens for security monitoring</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Create Honeytoken Form -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-plus-circle"></i> Create New Honeytoken
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if error %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle"></i> {{ error }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endif %}
+                
+                <form method="POST" action="{{ url_for('honeytokens') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Token Type</label>
+                        <select class="form-select" name="token_type" required id="tokenType">
+                            <option value="">Select type...</option>
+                            <option value="api_key">API Key</option>
+                            <option value="credential">Login Credentials</option>
+                            <option value="file_path">File Path</option>
+                            <option value="db_connection">Database Connection</option>
+                            <option value="url">Sensitive URL</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" name="name" 
+                               placeholder="e.g., Production API Key" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="3"
+                                  placeholder="Describe where this token will be placed..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Location</label>
+                        <input type="text" class="form-control" name="location" 
+                               placeholder="e.g., Production server config">
+                    </div>
+                    
+                    <!-- File-specific options -->
+                    <div id="fileOptions" class="mb-3" style="display: none;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" 
+                                   name="auto_monitor" id="autoMonitor" value="true">
+                            <label class="form-check-label" for="autoMonitor">
+                                Automatically monitor file for changes
+                            </label>
+                        </div>
+                        <div class="mt-2">
+                            <label class="form-label">File Permissions</label>
+                            <input type="text" class="form-control" name="file_permissions" 
+                                   value="644" placeholder="e.g., 644">
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create Honeytoken
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="card shadow mt-4">
+            <div class="card-body">
+                <h6><i class="fas fa-chart-bar"></i> Token Statistics</h6>
+                <div class="row mt-3">
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="h4 text-primary">{{ total_tokens }}</div>
+                            <small class="text-muted">Total Tokens</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-center">
+                            <div class="h4 text-success">{{ active_tokens }}</div>
+                            <small class="text-muted">Active Tokens</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Honeytokens List -->
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-list"></i> All Honeytokens
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="tokensTable">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Token Preview</th>
+                                <th>Status</th>
+                                <th>Accesses</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for token in tokens %}
+                            <tr>
+                                <td>
+                                    <strong>{{ token.name }}</strong>
+                                    {% if token.description %}
+                                    <br><small class="text-muted">{{ token.description[:50] }}...</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 
+                                        'primary' if token.token_type == 'api_key'
+                                        else 'success' if token.token_type == 'credential'
+                                        else 'info' if token.token_type == 'file_path'
+                                        else 'warning' if token.token_type == 'db_connection'
+                                        else 'secondary'
+                                    }}">
+                                        {{ token.token_type|replace('_', ' ')|title }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <code class="token-preview" 
+                                          data-token="{{ token.token }}"
+                                          title="Click to copy">
+                                        {{ token.token[:30] }}...
+                                    </code>
+                                </td>
+                                <td>
+                                    {% if token.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ token.access_count }}
+                                    {% if token.last_accessed %}
+                                    <br><small class="text-muted">{{ format_ist_time(token.last_accessed, "%H:%M") }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-info" 
+                                                onclick="viewToken({{ token.id }})"
+                                                title="View details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="btn btn-{{ 'danger' if token.is_active else 'success' }}"
+                                                onclick="toggleToken({{ token.id }}, {{ token.is_active|lower }})"
+                                                title="{{ 'Deactivate' if token.is_active else 'Activate' }}">
+                                            <i class="fas fa-{{ 'power-off' if token.is_active else 'play' }}"></i>
+                                        </button>
+                                        <button class="btn btn-outline-warning"
+                                                onclick="testToken('{{ token.token[:100] }}...')"
+                                                title="Test access">
+                                            <i class="fas fa-bolt"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">
+                                    No honeytokens created yet. Create your first one!
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- API Endpoints Info -->
+        <div class="card shadow mt-4">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-code"></i> API Endpoints
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="small">Access honeytokens via these endpoints:</p>
+                <div class="mb-2">
+                    <code class="bg-light p-2 d-block">
+                        GET /api/honeytoken/&lt;token&gt;
+                    </code>
+                    <small class="text-muted">Direct token access</small>
+                </div>
+                <div>
+                    <code class="bg-light p-2 d-block">
+                        GET /api/access?token=&lt;token&gt;
+                    </code>
+                    <small class="text-muted">Query parameter access (for file paths)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Token Details Modal -->
+<div class="modal fade" id="tokenModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Honeytoken Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="tokenDetails">
+                Loading...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="copyToken()">
+                    <i class="fas fa-copy"></i> Copy Token
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Show/hide file options based on token type
+    $('#tokenType').change(function() {
+        if ($(this).val() === 'file_path') {
+            $('#fileOptions').show();
+        } else {
+            $('#fileOptions').hide();
+        }
+    });
+    
+    // Initialize DataTable
+    $(document).ready(function() {
+        $('#tokensTable').DataTable({
+            pageLength: 10,
+            order: [[0, 'asc']]
+        });
+        
+        // Copy token on click
+        $('.token-preview').click(function() {
+            const token = $(this).data('token');
+            navigator.clipboard.writeText(token).then(function() {
+                $(this).tooltip('hide');
+                alert('Token copied to clipboard!');
+            }.bind(this));
+        });
+    });
+    
+    function viewToken(tokenId) {
+        $.get(`/api/honeytoken/${tokenId}`, function(data) {
+            let html = `
+                <h6>${data.name}</h6>
+                <p>${data.description || 'No description'}</p>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Type:</th>
+                                <td>${data.token_type}</td>
+                            </tr>
+                            <tr>
+                                <th>Location:</th>
+                                <td>${data.location || 'Not specified'}</td>
+                            </tr>
+                            <tr>
+                                <th>Created:</th>
+                                <td>${data.created_at}</td>
+                            </tr>
+                            <tr>
+                                <th>Status:</th>
+                                <td>
+                                    <span class="badge ${data.is_active ? 'bg-success' : 'bg-danger'}">
+                                        ${data.is_active ? 'Active' : 'Inactive'}
+                                    </span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-sm">
+                            <tr>
+                                <th>Access Count:</th>
+                                <td>${data.access_count}</td>
+                            </tr>
+                            <tr>
+                                <th>Last Accessed:</th>
+                                <td>${data.last_accessed || 'Never'}</td>
+                            </tr>
+                            <tr>
+                                <th>Token Preview:</th>
+                                <td>
+                                    <code class="bg-light p-1">${data.token_preview}</code>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <strong>Full Token:</strong>
+                    <div class="bg-light p-3 mt-1 rounded" style="max-height: 200px; overflow-y: auto;">
+                        <code style="word-break: break-all;">${data.token}</code>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <strong>Test URL:</strong>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="testUrl" 
+                               value="/api/honeytoken/${encodeURIComponent(data.token)}" readonly>
+                        <button class="btn btn-outline-secondary" onclick="copyTestUrl()">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            $('#tokenDetails').html(html);
+            $('#tokenModal').modal('show');
+        });
+    }
+    
+    function toggleToken(tokenId, isActive) {
+        if (confirm(`Are you sure you want to ${isActive ? 'deactivate' : 'activate'} this honeytoken?`)) {
+            $.post(`/api/honeytoken/toggle/${tokenId}`, function(data) {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                }
+            });
+        }
+    }
+    
+    function testToken(token) {
+        if (confirm('Test this honeytoken? This will log an access attempt.')) {
+            const testUrl = `/api/honeytoken/${encodeURIComponent(token)}`;
+            window.open(testUrl, '_blank');
+        }
+    }
+    
+    function copyToken() {
+        const tokenText = $('#tokenDetails code').text();
+        navigator.clipboard.writeText(tokenText).then(function() {
+            alert('Token copied to clipboard!');
+        });
+    }
+    
+    function copyTestUrl() {
+        const url = $('#testUrl').val();
+        navigator.clipboard.writeText(url).then(function() {
+            alert('URL copied to clipboard!');
+        });
+    }
+</script>
+{% endblock %}
