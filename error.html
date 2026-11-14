@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Error - Honeytoken Security{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg border-danger mt-5">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i> Error
+                    </h4>
+                </div>
+                <div class="card-body text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-bug fa-5x text-danger mb-4"></i>
+                        <h3 class="text-danger">Something went wrong!</h3>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <h5 class="alert-heading">
+                            <i class="fas fa-info-circle"></i> Error Details
+                        </h5>
+                        <p class="mb-0">{{ error }}</p>
+                    </div>
+                    
+                    <div class="mt-5">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+                            <i class="fas fa-home"></i> Go to Dashboard
+                        </a>
+                        <button onclick="history.back()" class="btn btn-secondary ms-2">
+                            <i class="fas fa-arrow-left"></i> Go Back
+                        </button>
+                        <button onclick="location.reload()" class="btn btn-outline-info ms-2">
+                            <i class="fas fa-sync"></i> Reload Page
+                        </button>
+                    </div>
+                    
+                    <div class="mt-5">
+                        <small class="text-muted">
+                            <i class="fas fa-clock"></i> Time: {{ current_ist_time() }}<br>
+                            <i class="fas fa-user"></i> User: {{ current_user.username if current_user.is_authenticated else 'Not logged in' }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Technical Details (for admins) -->
+            {% if current_user.is_admin %}
+            <div class="card shadow mt-4">
+                <div class="card-header bg-dark text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-code"></i> Technical Details
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Request Method:</strong> {{ request.method }}<br>
+                        <strong>Request URL:</strong> {{ request.url }}<br>
+                        <strong>Status Code:</strong> {{ error.code if error.code else '500' }}
+                    </div>
+                    <button class="btn btn-sm btn-outline-dark" onclick="copyErrorDetails()">
+                        <i class="fas fa-copy"></i> Copy Error Details
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function copyErrorDetails() {
+    const details = `Error: {{ error }}\nURL: {{ request.url }}\nMethod: {{ request.method }}\nTime: {{ current_ist_time() }}`;
+    navigator.clipboard.writeText(details).then(() => {
+        alert('Error details copied to clipboard');
+    });
+}
+</script>
+{% endblock %}
