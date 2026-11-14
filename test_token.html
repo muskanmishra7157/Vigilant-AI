@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Test Token - Honeytoken System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-warning">
+                <h4 class="mb-0"><i class="bi bi-bug"></i> Test Honeytoken Access</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h5><i class="bi bi-info-circle"></i> What this does:</h5>
+                    <p>This tool simulates a honeytoken access attempt to test the alert system. 
+                    It sends a fake API request that will trigger an alert in the system.</p>
+                </div>
+                
+                <div class="mb-4">
+                    <h5>Test Parameters</h5>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Token Type</label>
+                            <select id="tokenType" class="form-select">
+                                <option value="api_key">API Key</option>
+                                <option value="database">Database Credentials</option>
+                                <option value="file">File Path</option>
+                                <option value="url">URL</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Severity</label>
+                            <select id="severity" class="form-select">
+                                <option value="normal">Normal (No alert)</option>
+                                <option value="suspicious">Suspicious (Warning alert)</option>
+                                <option value="malicious" selected>Malicious (Critical alert)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Custom Token Value (Optional)</label>
+                        <input type="text" id="customToken" class="form-control" 
+                               placeholder="Leave empty for auto-generated">
+                    </div>
+                </div>
+                
+                <div class="d-grid">
+                    <button id="testBtn" class="btn btn-danger btn-lg" onclick="runTest()">
+                        <i class="bi bi-lightning-charge"></i> Run Test
+                    </button>
+                </div>
+                
+                <div id="testResult" class="mt-4"></div>
+            </div>
+        </div>
+        
+        <!-- Test Explanation -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-question-circle"></i> How It Works</h5>
+            </div>
+            <div class="card-body">
+                <ol>
+                    <li><strong>Generate Test Token:</strong> Creates a fake honeytoken value</li>
+                    <li><strong>Send API Request:</strong> Sends request to <code>/api/log_access</code></li>
+                    <li><strong>Log Access:</strong> System logs the access attempt</li>
+                    <li><strong>Analyze:</strong> System classifies the access (normal/suspicious/malicious)</li>
+                    <li><strong>Alert:</strong> If suspicious/malicious, creates an alert</li>
+                    <li><strong>Monitor:</strong> Check Alerts page to see the result</li>
+                </ol>
+                
+                <div class="alert alert-warning">
+                    <h6><i class="bi bi-exclamation-triangle"></i> Note:</h6>
+                    <p class="mb-0">This is a simulation. In real usage, honeytokens would be placed in your 
+                    actual systems (code repositories, databases, config files) and accessed by 
+                    attackers or automated tools.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- API Example -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-code-slash"></i> API Example</h5>
+            </div>
+            <div class="card-body">
+                <p>This is the API call that will be made:</p>
+                <pre class="bg-dark text-light p-3 rounded">
+POST /api/log_access
+Content-Type: application/json
+
+{
+    "token_value": "TEST_TOKEN_123456",
+    "action_type": "TEST",
+    "payload": {
+        "test": true,
+        "user_agent": "Test Browser",
+        "source": "test_page"
+    }
+}</pre>
+                
+                <p class="mt-3">To integrate with your applications, send similar POST requests when 
+                honeytokens are accessed.</p>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+            <a href="{{ url_for('alerts') }}" class="btn btn-primary ms-2">
+                <i class="bi bi-bell"></i> View Alerts
+            </a>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+async function runTest() {
+    const testBtn = document.getElementById('testBtn');
+    const testResult = document.getElementById('testResult');
+    
+    // Disable button and show loading
+    testBtn.disabled = true;
+    testBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Testing...';
+    
+    // Generate token
+    let tokenValue = document.getElementById('customToken').value;
+    if (!tokenValue) {
+        const tokenType = document.getElementById('tokenType').value;
+        const randomId = Math.random().toString(36).substr(2, 9);
+        tokenValue = `TEST_${tokenType.toUpperCase()}_${randomId}`;
+    }
+    
+    const severity = document.getElementById('severity').value;
+    
+    // Prepare test data
+    const testData = {
+        token_value: tokenValue,
+        action_type: 'TEST',
+        payload: {
+            test: true,
+            severity: severity,
+            user_agent: navigator.userAgent,
+            timestamp: new Date().toISOString()
+        }
+    };
+    
+    try {
+        // Send API request
+        const response = await fetch('/api/log_access', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(testData)
+        });
+        
+        const result = await response.json();
+        
+        // Display result
+        let alertClass = 'alert-success';
+        if (result.classification === 'malicious') {
+            alertClass = 'alert-danger';
+        } else if (result.classification === 'suspicious') {
+            alertClass = 'alert-warning';
+        }
+        
+        testResult.innerHTML = `
+            <div class="${alertClass}">
+                <h5><i class="bi bi-check-circle"></i> Test Complete!</h5>
+                <p><strong>Status:</strong> ${result.status}</p>
+                <p><strong>Token Value:</strong> <code>${tokenValue}</code></p>
+                <p><strong>Classification:</strong> 
+                    <span class="badge bg-${result.classification === 'malicious' ? 'danger' : result.classification === 'suspicious' ? 'warning' : 'success'}">
+                        ${result.classification.toUpperCase()}
+                    </span>
+                </p>
+                <p><strong>Risk Score:</strong> ${(result.risk_score * 100).toFixed(1)}%</p>
+                <p><strong>Alert Generated:</strong> ${result.alerted ? 'Yes' : 'No'}</p>
+                <p><strong>Log ID:</strong> ${result.log_id || 'N/A'}</p>
+                
+                <div class="mt-3">
+                    <a href="${result.alerted ? '/alerts' : '/logs'}" class="btn btn-sm btn-outline-${result.alerted ? 'danger' : 'info'}">
+                        <i class="bi bi-${result.alerted ? 'bell' : 'list-check'}"></i> 
+                        View ${result.alerted ? 'Alerts' : 'Logs'}
+                    </a>
+                </div>
+            </div>
+            
+            <div class="alert alert-info mt-3">
+                <h6>What happened:</h6>
+                <p class="mb-0">
+                    ${result.alerted 
+                        ? 'An alert has been generated! Check the Alerts page to see it.' 
+                        : 'The access was logged as normal. Check the Logs page to see the entry.'}
+                </p>
+            </div>
+        `;
+        
+    } catch (error) {
+        testResult.innerHTML = `
+            <div class="alert alert-danger">
+                <h5><i class="bi bi-x-circle"></i> Test Failed</h5>
+                <p><strong>Error:</strong> ${error.message}</p>
+                <p>Make sure the server is running and the API endpoint is accessible.</p>
+            </div>
+        `;
+    } finally {
+        // Re-enable button
+        testBtn.disabled = false;
+        testBtn.innerHTML = '<i class="bi bi-lightning-charge"></i> Run Test';
+    }
+}
+</script>
+{% endblock %}
+{% endblock %}
