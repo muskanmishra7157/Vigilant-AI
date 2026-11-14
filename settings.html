@@ -1,0 +1,431 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Honeytoken System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-gear"></i> System Settings</h2>
+        <span class="badge bg-dark">Admin Panel</span>
+    </div>
+
+    <div class="row">
+        <!-- Left Column - Settings Form -->
+        <div class="col-lg-8">
+            <!-- Email Settings Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-envelope"></i> Email Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <!-- Email Settings -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h6 class="border-bottom pb-2 mb-3">Email Settings</h6>
+
+                                {% for setting in settings if setting.category == 'email' %}
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">{{ setting.description }}</label>
+                                    {% if setting.setting_key == 'email_alerts_enabled' %}
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox"
+                                               name="setting_{{ setting.setting_key }}"
+                                               value="true"
+                                               id="{{ setting.setting_key }}"
+                                               {% if setting.setting_value == 'true' %}checked{% endif %}>
+                                        <label class="form-check-label" for="{{ setting.setting_key }}">
+                                            {{ 'Enabled' if setting.setting_value == 'true' else 'Disabled' }}
+                                        </label>
+                                    </div>
+                                    {% else %}
+                                    <input type="text" name="setting_{{ setting.setting_key }}"
+                                           class="form-control"
+                                           value="{{ setting.setting_value }}"
+                                           placeholder="Enter email addresses (comma separated)">
+                                    <small class="form-text text-muted">
+                                        Separate multiple emails with commas
+                                    </small>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Alert Settings -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h6 class="border-bottom pb-2 mb-3">Alert Preferences</h6>
+
+                                {% for setting in settings if setting.category == 'alerts' %}
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">{{ setting.description }}</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox"
+                                               name="setting_{{ setting.setting_key }}"
+                                               value="true"
+                                               id="{{ setting.setting_key }}"
+                                               {% if setting.setting_value == 'true' %}checked{% endif %}>
+                                        <label class="form-check-label" for="{{ setting.setting_key }}">
+                                            {{ 'Enabled' if setting.setting_value == 'true' else 'Disabled' }}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Security Settings -->
+                        <div class="row mb-4">
+                            <div class="col-md-12">
+                                <h6 class="border-bottom pb-2 mb-3">Security Settings</h6>
+
+                                {% for setting in settings if setting.category == 'security' %}
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">{{ setting.description }}</label>
+                                    {% if setting.setting_key == 'auto_block_ips' %}
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox"
+                                               name="setting_{{ setting.setting_key }}"
+                                               value="true"
+                                               id="{{ setting.setting_key }}"
+                                               {% if setting.setting_value == 'true' %}checked{% endif %}>
+                                        <label class="form-check-label" for="{{ setting.setting_key }}">
+                                            {{ 'Enabled' if setting.setting_value == 'true' else 'Disabled' }}
+                                        </label>
+                                    </div>
+                                    {% else %}
+                                    <div class="input-group" style="max-width: 200px;">
+                                        <input type="number" name="setting_{{ setting.setting_key }}"
+                                               class="form-control"
+                                               value="{{ setting.setting_value }}"
+                                               min="1" max="365">
+                                        <span class="input-group-text">days</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                            <div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-save"></i> Save Settings
+                                </button>
+                                <button type="reset" class="btn btn-outline-secondary ms-2" onclick="resetForm()">
+                                    <i class="bi bi-arrow-clockwise"></i> Reset
+                                </button>
+                            </div>
+                            <div>
+                                <a href="{{ url_for('test_email') }}" class="btn btn-warning">
+                                    <i class="bi bi-envelope-check"></i> Test Email
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Email Configuration Help -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Email Configuration Guide</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-google"></i> Gmail Setup Instructions:</h6>
+                        <ol class="mb-0">
+                            <li>Enable 2-Step Verification on your Google account</li>
+                            <li>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank">App Passwords</a></li>
+                            <li>Select "Mail" as the app and "Other" as the device</li>
+                            <li>Generate a 16-character app password</li>
+                            <li>Use this password in your application configuration</li>
+                        </ol>
+                    </div>
+                    <div class="alert alert-warning">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Important Notes:</h6>
+                        <ul class="mb-0">
+                            <li>Never use your regular Gmail password</li>
+                            <li>App passwords are more secure and can be revoked</li>
+                            <li>Test email functionality after configuration</li>
+                            <li>Check spam folder if emails are not received</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - User Management & Tools -->
+        <div class="col-lg-4">
+            <!-- User Management Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-people"></i> User Management</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr {% if user.username == current_user.username %}class="table-info"{% endif %}>
+                                    <td>
+                                        <strong>{{ user.username }}</strong>
+                                        {% if user.username == current_user.username %}
+                                        <span class="badge bg-info">You</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ 'danger' if user.role == 'admin' else 'primary' }}">
+                                            {{ user.role|upper }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if user.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-center">
+                        <small class="text-muted">Total Users: {{ users|length }}</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Tools Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-tools"></i> Quick Tools</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('test_token') }}" class="btn btn-outline-warning">
+                            <i class="bi bi-bug"></i> Test Token Access
+                        </a>
+                        <a href="/health" class="btn btn-outline-info" target="_blank">
+                            <i class="bi bi-heart-pulse"></i> System Health
+                        </a>
+
+                        <button class="btn btn-outline-success" onclick="exportSettings()">
+                            <i class="bi bi-download"></i> Export Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Info Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> System Information</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>System Version</span>
+                            <span class="badge bg-info">v1.0.0</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Database</span>
+                            <span class="badge bg-success">SQLite</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Current User</span>
+                            <span class="fw-bold">{{ current_user.username }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>User Role</span>
+                            <span class="badge bg-{{ 'danger' if current_user.role == 'admin' else 'primary' }}">
+                                {{ current_user.role|upper }}
+                            </span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>System Time</span>
+                            <span>{{ now().strftime('%H:%M:%S') }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Danger Zone Card -->
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Danger Zone</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">These actions are irreversible. Use with extreme caution.</p>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-danger" onclick="clearLogs()">
+                            <i class="bi bi-trash"></i> Clear All Logs
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="clearTokens()">
+                            <i class="bi bi-key"></i> Delete All Tokens
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="resetSystem()">
+                            <i class="bi bi-arrow-clockwise"></i> Reset System
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Handle form switch changes
+document.querySelectorAll('.form-check-input').forEach(switchElement => {
+    switchElement.addEventListener('change', function() {
+        const label = this.nextElementSibling;
+        if (label) {
+            label.textContent = this.checked ? 'Enabled' : 'Disabled';
+        }
+    });
+});
+
+// Reset form function
+function resetForm() {
+    if (confirm('Reset all settings to their saved values?')) {
+        document.querySelector('form').reset();
+        // Update switch labels
+        document.querySelectorAll('.form-check-input').forEach(switchElement => {
+            const label = switchElement.nextElementSibling;
+            if (label) {
+                label.textContent = switchElement.checked ? 'Enabled' : 'Disabled';
+            }
+        });
+        showNotification('Settings reset to saved values', 'info');
+    }
+}
+
+// Export settings as JSON
+function exportSettings() {
+    const formData = new FormData(document.querySelector('form'));
+    const settings = {};
+
+    for (let [key, value] of formData.entries()) {
+        settings[key] = value;
+    }
+
+    const dataStr = JSON.stringify(settings, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+
+    const downloadLink = document.createElement('a');
+    downloadLink.download = 'honeytoken-settings-' + new Date().toISOString().slice(0,10) + '.json';
+    downloadLink.href = URL.createObjectURL(dataBlob);
+    downloadLink.click();
+
+    showNotification('Settings exported successfully', 'success');
+}
+
+// Danger zone actions
+function clearLogs() {
+    if (confirm('⚠️ WARNING: This will delete ALL access logs. This action cannot be undone!\n\nAre you sure?')) {
+        showNotification('Clearing logs... (Feature not implemented)', 'warning');
+    }
+}
+
+function clearTokens() {
+    if (confirm('⚠️ WARNING: This will delete ALL honeytokens. This action cannot be undone!\n\nAre you sure?')) {
+        showNotification('Clearing tokens... (Feature not implemented)', 'warning');
+    }
+}
+
+function resetSystem() {
+    if (confirm('⚠️ DANGER: This will reset ALL system settings and data to defaults (except admin user).\n\nThis action cannot be undone!\n\nType "RESET" to confirm:')) {
+        const userInput = prompt('Type "RESET" to confirm system reset:');
+        if (userInput === 'RESET') {
+            showNotification('Resetting system... (Feature not implemented)', 'danger');
+        } else {
+            showNotification('System reset cancelled', 'info');
+        }
+    }
+}
+
+// Show notification
+function showNotification(message, type = 'info') {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 1055;';
+    toast.setAttribute('role', 'alert');
+
+    const icon = type === 'success' ? 'check-circle' :
+                 type === 'warning' ? 'exclamation-triangle' :
+                 type === 'danger' ? 'exclamation-triangle' : 'info-circle';
+
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi bi-${icon} me-2"></i>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+
+    document.body.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast, {delay: 3000});
+    bsToast.show();
+
+    // Remove toast after hiding
+    toast.addEventListener('hidden.bs.toast', function () {
+        document.body.removeChild(toast);
+    });
+}
+
+// Auto-save indicator
+let autoSaveTimer;
+document.querySelector('form').addEventListener('input', function() {
+    const saveBtn = document.querySelector('.btn-primary');
+    const originalText = saveBtn.innerHTML;
+
+    // Show unsaved changes
+    saveBtn.innerHTML = '<i class="bi bi-pencil"></i> Unsaved Changes';
+    saveBtn.classList.remove('btn-primary');
+    saveBtn.classList.add('btn-warning');
+
+    // Clear previous timer
+    clearTimeout(autoSaveTimer);
+
+    // Set new timer to revert after 2 seconds of inactivity
+    autoSaveTimer = setTimeout(() => {
+        saveBtn.innerHTML = originalText;
+        saveBtn.classList.remove('btn-warning');
+        saveBtn.classList.add('btn-primary');
+    }, 2000);
+});
+
+// Form submission feedback
+document.querySelector('form').addEventListener('submit', function(e) {
+    const saveBtn = this.querySelector('.btn-primary');
+    const originalText = saveBtn.innerHTML;
+
+    // Show saving state
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Saving...';
+    saveBtn.disabled = true;
+
+    // Revert after 1.5 seconds (form will have submitted by then)
+    setTimeout(() => {
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+        saveBtn.classList.remove('btn-warning');
+        saveBtn.classList.add('btn-primary');
+    }, 1500);
+});
+</script>
+{% endblock %}
+{% endblock %}
